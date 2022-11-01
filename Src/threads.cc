@@ -8,6 +8,7 @@
 #include<sys/types.h>
 #include<sys/socket.h>
 #include<netinet/in.h>
+#include<arpa/inet.h>
 
 #include<chrono>
 #include<thread>
@@ -15,6 +16,7 @@
 #include<mutex>
 
 #include<json.hpp>
+#include<global.h>
 
 using namespace std;
 using namespace nlohmann;
@@ -88,6 +90,7 @@ int CSIR::thread_gripper_control(condition_variable& condition, bool& if_grasp){
 
     ssize_t recv_num;
     char recv_buf[200];
+    char send_buf[200];
     struct sockaddr_in addr_client;
     struct timeval tv;
     tv.tv_sec = 0;
@@ -95,6 +98,14 @@ int CSIR::thread_gripper_control(condition_variable& condition, bool& if_grasp){
     setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
     std::array<double, DOF> JointVal = {0};
+
+    //create
+    struct sockaddr_in addr_report;
+    bzero(&addr_report, sizeof(addr_report));
+    addr_report.sin_family = AF_INET;
+    addr_report.sin_port = htons(2022);
+    addr_report.sin_addr.s_addr = inet_addr("192.168.8.121");
+
 
     while (true)
     {
@@ -126,6 +137,16 @@ int CSIR::thread_gripper_control(condition_variable& condition, bool& if_grasp){
             //send information
             //std::cout << JointVal[0]<<' ' <<JointVal[1]<<' '<<JointVal[2]<<' '<<JointVal[3]<<' '<<JointVal[4]<<' '<<JointVal[5]<<' '<<JointVal[6]<< std::endl;
             message_queue.put(JointVal);
+
+            //send back the current State
+            String& StateQ = String::Instance();
+            if(!StateQ.isEmpty()) {
+                const char* s = StateQ.content();
+                memcpy(send_buf, s, strlen(s)+1);
+                cout << send_buf << endl;
+                sendto(sock_fd, send_buf, sizeof(send_buf), 0, (struct sockaddr *) &addr_report, (socklen_t) sizeof(addr_report));
+                memset(send_buf, '\0', sizeof(send_buf));
+            }
 
             //send grasp
             if_grasp = bool(_if_grasp);

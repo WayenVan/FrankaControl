@@ -9,6 +9,9 @@
 #include <queue>
 #include <cmath>
 
+#include <json.hpp>
+#include <global.h>
+
 using namespace std;
 
 void CSIR::Robot::initialize(franka::Robot& robot){
@@ -54,6 +57,13 @@ void CSIR::Robot::robot_control(franka::Robot& robot,
 
     robot.control([&](const franka::RobotState&  robot_state, franka::Duration period) -> franka::JointVelocities {
 
+
+        //record the current state:
+        nlohmann::json j;
+        j["joints"]={robot_state.q[0], robot_state.q[1], robot_state.q[2], robot_state.q[3], robot_state.q[4], robot_state.q[5], robot_state.q[6]};
+        String::Instance().move(j.dump().data());
+
+        //start control
         time_update_count += period.toMSec();
 
         //update the queues which stored the next   

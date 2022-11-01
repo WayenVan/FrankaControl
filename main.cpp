@@ -8,7 +8,9 @@
 using namespace std;
 using namespace CSIR;
 
+
 int main(int argc, char** argv){
+
     MessageQue<array<double, DOF> > q;
     condition_variable cv;
     bool if_grasp = false;
